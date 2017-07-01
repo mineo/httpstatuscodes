@@ -41,6 +41,7 @@ func runTest(c *C, path string, expectedCode int, expectedResponse Response) {
 
 	writer := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", path, nil)
+	request.Header.Add("Accept", "application/json")
 	serve(writer, request)
 	d.AssertStatusCode(writer, expectedCode)
 

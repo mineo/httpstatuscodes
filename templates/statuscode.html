@@ -1,0 +1,15 @@
+{{ define "title" }}Status Code{{ end }}
+{{ define "content"}}
+<table>
+	<tr>
+		<td style='width: 30%;'>
+			<img class = 'newappIcon' src='/static/images/newapp-icon.png'>
+		</td>
+		<td>
+			<h1 id="message">HTTP Status {{.Response.Code}}</h1>
+			<p class='description'></p> {{.Response.Description}}</span>.
+			<span>Find more information on <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/{{.Response.Code}}">MDN</a>.</span>
+		</td>
+	</tr>
+</table>
+{{ end }}

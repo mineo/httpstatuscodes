@@ -22,6 +22,11 @@ var index = template.Must(template.ParseFiles(
 	"templates/index.html",
 ))
 
+var singlecode = template.Must(template.ParseFiles(
+	"templates/_base.html",
+	"templates/statuscode.html",
+))
+
 type StatusCodeDescription struct {
 	Code        int
 	Description string
@@ -57,17 +62,10 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) (err error) {
 	return
 }
 
-func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
-	var response Response
-	w.Header().Add("Content-Type", "application/json")
-
-	vars := mux.Vars(req)
-	statuscode, err := strconv.Atoi(vars["statuscode"])
+func fetchStatusCodeInformation(codestring string) (scd StatusCodeDescription, err error) {
+	statuscode, err := strconv.Atoi(codestring)
 
 	if err != nil {
-		response.Error = err.Error()
-		log.Println(err.Error())
-		_ = writeJSON(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -75,13 +73,26 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 
 	if description == "" {
 		err = StatusCodeDoesNotExist{code: statuscode}
-		response.Error = err.Error()
-		_ = writeJSON(w, http.StatusBadRequest, response)
 		return
 	}
 
-	scd := StatusCodeDescription{Code: statuscode, Description: description}
-	response.Response = scd
+	scd = StatusCodeDescription{Code: statuscode, Description: description}
+	return
+}
+
+func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
+	var err error
+	var response Response
+	w.Header().Add("Content-Type", "application/json")
+
+	vars := mux.Vars(req)
+
+	if response.Response, err = fetchStatusCodeInformation(vars["statuscode"]); err != nil {
+		response.Error = err.Error()
+		log.Println(err.Error())
+		_ = writeJSON(w, http.StatusBadRequest, response)
+		return
+	}
 
 	var bytes []byte
 
@@ -101,11 +112,30 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func describeHTTPStatusCodeHTML(w http.ResponseWriter, req *http.Request) {
+	var err error
+	var response Response
+
+	vars := mux.Vars(req)
+
+	if response.Response, err = fetchStatusCodeInformation(vars["statuscode"]); err != nil {
+		w.Header().Add("Content-Type", "application/json")
+		response.Error = err.Error()
+		log.Println(err.Error())
+		_ = writeJSON(w, http.StatusBadRequest, response)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/html")
+	singlecode.Execute(w, response)
+}
+
 func Router() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", helloworld)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCode)
+	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCode).Headers("Accept", "application/json")
+	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCodeHTML)
 	return r
 }
 
