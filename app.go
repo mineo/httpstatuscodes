@@ -8,6 +8,7 @@ import (
 	//for extracting service credentials from VCAP_SERVICES
 	//"github.com/cloudfoundry-community/go-cfenv"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"strconv"
 )
@@ -31,6 +32,15 @@ type Response struct {
 	Response StatusCodeDescription
 }
 
+type StatusCodeDoesNotExist struct {
+	code int
+}
+
+func (s StatusCodeDoesNotExist) Error() (message string) {
+	message = fmt.Sprintf("%v is not a valid HTTP status code", s.code)
+	return
+}
+
 func helloworld(w http.ResponseWriter, req *http.Request) {
 	index.Execute(w, nil)
 }
@@ -42,6 +52,7 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) (err error) {
 		log.Println(err.Error())
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_, _ = w.Write(bytes)
 	return
@@ -62,6 +73,13 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 
 	description := http.StatusText(statuscode)
 
+	if description == "" {
+		err = StatusCodeDoesNotExist{code: statuscode}
+		response.Error = err.Error()
+		_ = writeJSON(w, http.StatusInternalServerError, response)
+		return
+	}
+
 	scd := StatusCodeDescription{Code: statuscode, Description: description}
 	response.Response = scd
 
@@ -74,7 +92,6 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Add("Content-Type", "application/json")
 	if _, err := w.Write(bytes); err != nil {
 		response.Error = err.Error()
 		log.Println(err.Error())
