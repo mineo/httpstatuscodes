@@ -1,0 +1,8 @@
+applications:
+- path: .
+  memory: 128M
+  instances: 1
+  domain: eu-de.mybluemix.net
+  name: httpstatuscodes
+  host: httpstatuscodes
+  disk_quota: 1024M
