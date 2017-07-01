@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/mineo/httpstatuscodes",
-	"GoVersion": "go1.5.4",
+	"GoVersion": "go1.7.5",
 	"GodepVersion": "v79",
 	"Deps": [
 		{
