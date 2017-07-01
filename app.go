@@ -52,7 +52,6 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) (err error) {
 		log.Println(err.Error())
 	}
 
-	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_, _ = w.Write(bytes)
 	return
@@ -60,6 +59,7 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) (err error) {
 
 func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 	var response Response
+	w.Header().Add("Content-Type", "application/json")
 
 	vars := mux.Vars(req)
 	statuscode, err := strconv.Atoi(vars["statuscode"])
@@ -76,7 +76,7 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 	if description == "" {
 		err = StatusCodeDoesNotExist{code: statuscode}
 		response.Error = err.Error()
-		_ = writeJSON(w, http.StatusInternalServerError, response)
+		_ = writeJSON(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -101,17 +101,21 @@ func describeHTTPStatusCode(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func Router() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc("/", helloworld)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCode)
+	return r
+}
+
 func main() {
 	var port string
 	if port = os.Getenv("PORT"); len(port) == 0 {
 		port = DEFAULT_PORT
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", helloworld)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCode)
-	http.Handle("/", r)
+	http.Handle("/", Router())
 
 	log.Printf("Starting app on port %+v\n", port)
 	http.ListenAndServe(":"+port, nil)
