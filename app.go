@@ -91,6 +91,8 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/", helloworld)
+	r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.HandleFunc("/status/{statuscode}", describeHTTPStatusCode)
 	http.Handle("/", r)
 
